@@ -1,58 +1,62 @@
 #include "pxt.h"
 
 namespace dht22native {
-    static uint8_t bytes[5];
+    static int dataBytes[5] = { 0, 0, 0, 0, 0 };
 
-    static bool waitForValue(MicroBitPin *pin, int value, uint32_t timeoutUs) {
-        uint32_t start = system_timer_current_time_us();
-        while (pin->getDigitalValue() != value) {
-            if (system_timer_current_time_us() - start > timeoutUs)
-                return false;
+    static int waitForLevel(MicroBitPin *pin, int level, int timeoutUs) {
+        uint64_t started = system_timer_current_time_us();
+        while (pin->getDigitalValue() != level) {
+            if (system_timer_current_time_us() - started >= (uint64_t)timeoutUs)
+                return 0;
         }
-        return true;
+        return 1;
     }
 
-    //% shim=dht22native::read
+    /**
+     * Read one complete DHT22 frame.
+     */
+    //%
     int read(int pinId) {
-        MicroBitPin *pin = getPin(pinId);
-        if (!pin)
+        MicroBitPin *pin = pxt::getPin(pinId);
+        if (pin == NULL)
             return -1;
 
-        for (int i = 0; i < 5; i++)
-            bytes[i] = 0;
+        for (int i = 0; i < 5; ++i)
+            dataBytes[i] = 0;
 
-        // Start signal: LOW for at least 1 ms; 18 ms also supports DHT11.
         pin->setDigitalValue(0);
-        fiber_sleep(18);
+        fiber_sleep(2);
         pin->setDigitalValue(1);
         wait_us(30);
-        pin->getDigitalValue(); // switch pin to digital input
+        pin->getDigitalValue();
 
-        // Sensor response: LOW, HIGH, then first data LOW.
-        if (!waitForValue(pin, 0, 120)) return -2;
-        if (!waitForValue(pin, 1, 120)) return -3;
-        if (!waitForValue(pin, 0, 120)) return -4;
+        if (!waitForLevel(pin, 0, 150)) return -2;
+        if (!waitForLevel(pin, 1, 150)) return -3;
+        if (!waitForLevel(pin, 0, 150)) return -4;
 
-        for (int bit = 0; bit < 40; bit++) {
-            // Each data bit starts LOW and then goes HIGH.
-            if (!waitForValue(pin, 1, 100)) return -10 - bit;
+        for (int bit = 0; bit < 40; ++bit) {
+            if (!waitForLevel(pin, 1, 100)) return -10 - bit;
 
-            uint32_t highStart = system_timer_current_time_us();
-            if (!waitForValue(pin, 0, 120)) return -60 - bit;
-            uint32_t highLength = system_timer_current_time_us() - highStart;
+            uint64_t highStarted = system_timer_current_time_us();
+            if (!waitForLevel(pin, 0, 120)) return -60 - bit;
+            int highUs = (int)(system_timer_current_time_us() - highStarted);
 
-            bytes[bit >> 3] <<= 1;
-            if (highLength > 45)
-                bytes[bit >> 3] |= 1;
+            int byteIndex = bit >> 3;
+            dataBytes[byteIndex] = (dataBytes[byteIndex] << 1) & 255;
+            if (highUs > 45)
+                dataBytes[byteIndex] |= 1;
         }
 
         return 0;
     }
 
-    //% shim=dht22native::byteAt
+    /**
+     * Return one byte from the last frame.
+     */
+    //%
     int byteAt(int index) {
-        if (index < 0 || index > 4)
+        if (index < 0 || index >= 5)
             return 0;
-        return bytes[index];
+        return dataBytes[index];
     }
 }
