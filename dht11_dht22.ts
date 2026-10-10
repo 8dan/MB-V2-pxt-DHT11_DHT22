@@ -83,12 +83,22 @@ namespace dht11_dht22 {
             while (pins.digitalReadPin(dataPin) == 1); //sensor response
 
             //read data (5 bytes)
+            // Measure the HIGH pulse duration instead of sampling after a fixed delay.
+            // DHT22 sends about 26-28 us for bit 0 and about 70 us for bit 1.
             for (let index = 0; index < 40; index++) {
-                while (pins.digitalReadPin(dataPin) == 1);
+                let pulseStart: number = 0
+                let pulseEnd: number = 0
+
+                // Wait for the LOW part at the beginning of the bit to finish.
                 while (pins.digitalReadPin(dataPin) == 0);
-                control.waitMicros(28)
-                //if sensor still pull up data pin after 28 us it means 1, otherwise 0
-                if (pins.digitalReadPin(dataPin) == 1) dataArray[index] = true
+
+                // Measure the duration of the HIGH part.
+                pulseStart = input.runningTimeMicros()
+                while (pins.digitalReadPin(dataPin) == 1);
+                pulseEnd = input.runningTimeMicros()
+
+                // Use the midpoint between a logical 0 and 1 as the threshold.
+                if (pulseEnd - pulseStart > 45) dataArray[index] = true
             }
 
             endTime = input.runningTimeMicros()
