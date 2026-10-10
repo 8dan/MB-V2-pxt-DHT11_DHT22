@@ -27,7 +27,10 @@ namespace dht22native {
         pin->setDigitalValue(0);
         fiber_sleep(2);
         pin->setDigitalValue(1);
-        wait_us(30);
+        uint64_t releaseStarted = system_timer_current_time_us();
+		while (system_timer_current_time_us() - releaseStarted < 30) {
+		// Wait 30 microseconds.
+		}
         pin->getDigitalValue();
 
         if (!waitForLevel(pin, 0, 150)) return -2;
