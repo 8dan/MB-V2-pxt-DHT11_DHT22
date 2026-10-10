@@ -1,6 +1,6 @@
 {
     "name": "pxt-DHT11_DHT22",
-    "version": "0.0.9",
+    "version": "0.0.10",
     "description": "MakeCode extension for DHT11/DHT22 humidity and temperature sensors",
     "dependencies": {
         "core": "*"
@@ -8,11 +8,11 @@
     "files": [
         "README.md",
         "dht11_dht22.ts",
-        "dht22native.ts",
-        "dht22native.cpp"
+        "dht22native.cpp",
+        "shims.d.ts"
     ],
     "simFiles": [
-        "dht22native_sim.ts"
+        "sim/dht22native.ts"
     ],
     "testFiles": [
         "test.ts"
