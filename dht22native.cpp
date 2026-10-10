@@ -15,6 +15,71 @@ namespace dht22native {
         return 1;
     }
 
+    static int readFrame(MicroBitPin *pin) {
+        for (int i = 0; i < 5; ++i) {
+            dataBytes[i] = 0;
+        }
+
+        // Send start signal before entering the timing-critical section.
+        pin->setDigitalValue(0);
+        fiber_sleep(2);
+        pin->setDigitalValue(1);
+
+        uint64_t releaseStarted = system_timer_current_time_us();
+        while (system_timer_current_time_us() - releaseStarted < 30) {
+            // Wait 30 microseconds.
+        }
+
+        pin->getDigitalValue();
+
+        // Prevent display and runtime interrupts from disturbing DHT22 timing.
+        uint32_t previousInterruptState = __get_PRIMASK();
+        __disable_irq();
+
+        int status = 0;
+
+        // Sensor response: LOW, HIGH, LOW.
+        if (!waitForLevel(pin, 0, 150)) {
+            status = -2;
+        } else if (!waitForLevel(pin, 1, 150)) {
+            status = -3;
+        } else if (!waitForLevel(pin, 0, 150)) {
+            status = -4;
+        }
+
+        // Read 40 data bits.
+        if (status == 0) {
+            for (int bit = 0; bit < 40; ++bit) {
+                if (!waitForLevel(pin, 1, 150)) {
+                    status = -10 - bit;
+                    break;
+                }
+
+                uint64_t highStarted = system_timer_current_time_us();
+
+                if (!waitForLevel(pin, 0, 150)) {
+                    status = -60 - bit;
+                    break;
+                }
+
+                int highUs = (int)(system_timer_current_time_us() - highStarted);
+                int byteIndex = bit >> 3;
+
+                dataBytes[byteIndex] = (dataBytes[byteIndex] << 1) & 255;
+
+                if (highUs > 45) {
+                    dataBytes[byteIndex] |= 1;
+                }
+            }
+        }
+
+        if (previousInterruptState == 0) {
+            __enable_irq();
+        }
+
+        return status;
+    }
+
     /**
      * Read one complete DHT22 frame.
      */
@@ -26,62 +91,7 @@ namespace dht22native {
             return -1;
         }
 
-        for (int i = 0; i < 5; ++i) {
-            dataBytes[i] = 0;
-        }
-
-        // Send the start signal to the DHT22.
-        pin->setDigitalValue(0);
-        fiber_sleep(2);
-        pin->setDigitalValue(1);
-
-        uint64_t releaseStarted = system_timer_current_time_us();
-        while (system_timer_current_time_us() - releaseStarted < 30) {
-            // Wait 30 microseconds.
-        }
-
-        // Switch the pin to digital input mode.
-        pin->getDigitalValue();
-
-        // Sensor response: LOW, HIGH, then LOW before the first data bit.
-        if (!waitForLevel(pin, 0, 150)) {
-            return -2;
-        }
-
-        if (!waitForLevel(pin, 1, 150)) {
-            return -3;
-        }
-
-        if (!waitForLevel(pin, 0, 150)) {
-            return -4;
-        }
-
-        // Read 40 data bits.
-        for (int bit = 0; bit < 40; ++bit) {
-            // Wait for the HIGH part of the current bit.
-            if (!waitForLevel(pin, 1, 500)) {
-                return -10 - bit;
-            }
-
-            uint64_t highStarted = system_timer_current_time_us();
-
-            // Wait for the HIGH part to end.
-            if (!waitForLevel(pin, 0, 500)) {
-                return -60 - bit;
-            }
-
-            int highUs = (int)(system_timer_current_time_us() - highStarted);
-            int byteIndex = bit >> 3;
-
-            dataBytes[byteIndex] = (dataBytes[byteIndex] << 1) & 255;
-
-            // About 26-28 us means 0; about 70 us means 1.
-            if (highUs > 45) {
-                dataBytes[byteIndex] |= 1;
-            }
-        }
-
-        return 0;
+        return readFrame(pin);
     }
 
     /**
