@@ -100,15 +100,6 @@ namespace dht11_dht22 {
 
             endTime = input.runningTimeMicros()
 
-            // micro:bit V2 reads this stream one bit too early/left-shifted:
-            // observed bits are actual bits 1..39 followed by an extra 0.
-            // Shift the complete 40-bit frame right by one position and restore
-            // the leading zero used by valid DHT22 humidity values.
-            for (let index = 39; index > 0; index--) {
-                dataArray[index] = dataArray[index - 1]
-            }
-            dataArray[0] = false
-
             //convert byte number array to integer
             for (let index = 0; index < 5; index++)
                 for (let index2 = 0; index2 < 8; index2++)
