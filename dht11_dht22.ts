@@ -2,7 +2,6 @@
  * MakeCode editor extension for DHT11 and DHT22 humidity/temperature sensors
  * by Alan Wang
  */
-
 enum DHTtype {
     //% block="DHT11"
     DHT11,
@@ -34,7 +33,7 @@ namespace dht11_dht22 {
     let _sensorresponding: boolean = false
 
     /**
-    * Query data from DHT11/DHT22 sensor. If you are using 4 pins/no PCB board versions, you'll need to pull up the data pin. 
+    * Query data from DHT11/DHT22 sensor. If you are using 4 pins/no PCB board versions, you'll need to pull up the data pin.
     * It is also recommended to wait 1 (DHT11) or 2 (DHT22) seconds between each query.
     */
     //% block="Query $DHT|Data pin $dataPin|Pin pull up $pullUp|Serial output $serialOtput|Wait 2 sec after query $wait"
@@ -65,17 +64,16 @@ namespace dht11_dht22 {
         //request data
         pins.digitalWritePin(dataPin, 0) //begin protocol, pull down pin
         basic.pause(18)
-        
+
         if (pullUp) pins.setPull(dataPin, PinPullMode.PullUp) //pull up data pin if needed
         pins.digitalReadPin(dataPin) //pull up pin
         control.waitMicros(40)
-        
+
         if (pins.digitalReadPin(dataPin) == 1) {
             if (serialOtput) {
                 serial.writeLine(DHTstr + " not responding!")
                 serial.writeLine("----------------------------------------")
             }
-
         } else {
 
             _sensorresponding = true
@@ -87,8 +85,8 @@ namespace dht11_dht22 {
             for (let index = 0; index < 40; index++) {
                 while (pins.digitalReadPin(dataPin) == 1);
                 while (pins.digitalReadPin(dataPin) == 0);
-                control.waitMicros(39)
-                //if sensor still pull up data pin after 28 us (8dan spremenil na 39) it means 1, otherwise 0
+                control.waitMicros(40)
+                //if sensor still pulls up data pin after 40 us, it means 1; otherwise 0
                 if (pins.digitalReadPin(dataPin) == 1) dataArray[index] = true
             }
 
@@ -98,6 +96,18 @@ namespace dht11_dht22 {
             for (let index = 0; index < 5; index++)
                 for (let index2 = 0; index2 < 8; index2++)
                     if (dataArray[8 * index + index2]) resultArray[index] += 2 ** (7 - index2)
+
+            //RAW diagnostic output
+            if (serialOtput) {
+                serial.writeLine(
+                    "RAW: "
+                    + resultArray[0] + ", "
+                    + resultArray[1] + ", "
+                    + resultArray[2] + ", "
+                    + resultArray[3] + ", "
+                    + resultArray[4]
+                )
+            }
 
             //verify checksum
             checksumTmp = resultArray[0] + resultArray[1] + resultArray[2] + resultArray[3]
@@ -138,12 +148,10 @@ namespace dht11_dht22 {
                 }
                 serial.writeLine("----------------------------------------")
             }
-
         }
 
         //wait 2 sec after query if needed
         if (wait) basic.pause(2000)
-
     }
 
     /**
@@ -177,5 +185,4 @@ namespace dht11_dht22 {
     export function sensorrResponding(): boolean {
         return _sensorresponding
     }
-
 }
