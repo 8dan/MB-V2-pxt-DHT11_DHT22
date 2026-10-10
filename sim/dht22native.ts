@@ -1,7 +1,6 @@
 namespace pxsim {
     export namespace dht22native {
         export function read(pin: number): number {
-            // Fizični DHT22 v simulatorju ni na voljo.
             return -1000
         }
 
@@ -9,4 +8,8 @@ namespace pxsim {
             return 0
         }
     }
+
+    // Prepreči odstranitev funkcij med optimizacijo simulatorja.
+    dht22native.read(0)
+    dht22native.byteAt(0)
 }
