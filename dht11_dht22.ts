@@ -83,11 +83,19 @@ namespace dht11_dht22 {
 
             //read data (5 bytes)
             for (let index = 0; index < 40; index++) {
-                while (pins.digitalReadPin(dataPin) == 1);
+                // Wait for the low part of the bit to end and the high part to begin.
                 while (pins.digitalReadPin(dataPin) == 0);
+
+                // A high pulse of about 26-28 us means 0.
+                // A high pulse of about 70 us means 1.
                 control.waitMicros(40)
-                //if sensor still pulls up data pin after 40 us, it means 1; otherwise 0
-                if (pins.digitalReadPin(dataPin) == 1) dataArray[index] = true
+
+                if (pins.digitalReadPin(dataPin) == 1) {
+                    dataArray[index] = true
+                }
+
+                // Wait for the high part of the current bit to end.
+                while (pins.digitalReadPin(dataPin) == 1);
             }
 
             endTime = input.runningTimeMicros()
