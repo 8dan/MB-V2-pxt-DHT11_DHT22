@@ -62,10 +62,9 @@ namespace dht11_dht22 {
         _sensorresponding = false
         startTime = input.runningTimeMicros()
 
-        // Use the native C++ reader for DHT22 on micro:bit V2.
+        // Native DHT22 reader for micro:bit V2.
         if (DHT == DHTtype.DHT22) {
             let nativeStatus: number = dht22native.read(dataPin)
-            endTime = input.runningTimeMicros()
 
             if (nativeStatus == 0) {
                 _sensorresponding = true
@@ -74,13 +73,13 @@ namespace dht11_dht22 {
                     resultArray[index] = dht22native.byteAt(index)
                 }
 
-                checksumTmp = resultArray[0] + resultArray[1] + resultArray[2] + resultArray[3]
+                checksumTmp = (resultArray[0] + resultArray[1] + resultArray[2] + resultArray[3]) % 256
                 checksum = resultArray[4]
-                checksumTmp = checksumTmp % 256
                 _readSuccessful = checksum == checksumTmp
 
                 if (_readSuccessful) {
                     let tempSign: number = 1
+
                     if (resultArray[2] >= 128) {
                         resultArray[2] -= 128
                         tempSign = -1
@@ -95,34 +94,17 @@ namespace dht11_dht22 {
                 }
             }
 
-            if (serialOtput) {
-                serial.writeLine(
-                    "RAW native: "
-                    + resultArray[0] + ", "
-                    + resultArray[1] + ", "
-                    + resultArray[2] + ", "
-                    + resultArray[3] + ", "
-                    + resultArray[4]
-                )
-                serial.writeLine("Native status: " + nativeStatus)
-                serial.writeLine("Checksum calculated: " + checksumTmp + ", received: " + checksum)
-                serial.writeLine(DHTstr + " native query completed in " + (endTime - startTime) + " microseconds")
-
-                if (_readSuccessful) {
-                    serial.writeLine("Checksum ok")
-                    serial.writeLine("Humidity: " + _humidity + " %")
-                    serial.writeLine("Temperature: " + _temperature + (_temptype == tempType.celsius ? " *C" : " *F"))
-                } else {
-                    serial.writeLine("Checksum error")
-                }
-                serial.writeLine("----------------------------------------")
+            // Only valid temperature and humidity readings are sent to serial.
+            if (serialOtput && _readSuccessful) {
+                serial.writeLine("Temperature: " + _temperature + (_temptype == tempType.celsius ? " *C" : " *F"))
+                serial.writeLine("Humidity: " + _humidity + " %")
             }
 
             if (wait) basic.pause(2000)
             return
         }
 
-        // Original TypeScript reader remains available for DHT11.
+        // Original TypeScript reader for DHT11.
         //request data
         pins.digitalWritePin(dataPin, 0) //begin protocol, pull down pin
         basic.pause(18)
