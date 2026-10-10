@@ -7,7 +7,9 @@
     },
     "files": [
         "README.md",
-        "dht11_dht22.ts"
+        "dht11_dht22.ts",
+        "dht22native.ts",
+        "dht22native.cpp"
     ],
     "testFiles": [
         "test.ts"

@@ -62,6 +62,67 @@ namespace dht11_dht22 {
         _sensorresponding = false
         startTime = input.runningTimeMicros()
 
+        // Use the native C++ reader for DHT22 on micro:bit V2.
+        if (DHT == DHTtype.DHT22) {
+            let nativeStatus: number = dht22native.read(dataPin)
+            endTime = input.runningTimeMicros()
+
+            if (nativeStatus == 0) {
+                _sensorresponding = true
+
+                for (let index = 0; index < 5; index++) {
+                    resultArray[index] = dht22native.byteAt(index)
+                }
+
+                checksumTmp = resultArray[0] + resultArray[1] + resultArray[2] + resultArray[3]
+                checksum = resultArray[4]
+                checksumTmp = checksumTmp % 256
+                _readSuccessful = checksum == checksumTmp
+
+                if (_readSuccessful) {
+                    let tempSign: number = 1
+                    if (resultArray[2] >= 128) {
+                        resultArray[2] -= 128
+                        tempSign = -1
+                    }
+
+                    _humidity = (resultArray[0] * 256 + resultArray[1]) / 10
+                    _temperature = (resultArray[2] * 256 + resultArray[3]) / 10 * tempSign
+
+                    if (_temptype == tempType.fahrenheit) {
+                        _temperature = _temperature * 9 / 5 + 32
+                    }
+                }
+            }
+
+            if (serialOtput) {
+                serial.writeLine(
+                    "RAW native: "
+                    + resultArray[0] + ", "
+                    + resultArray[1] + ", "
+                    + resultArray[2] + ", "
+                    + resultArray[3] + ", "
+                    + resultArray[4]
+                )
+                serial.writeLine("Native status: " + nativeStatus)
+                serial.writeLine("Checksum calculated: " + checksumTmp + ", received: " + checksum)
+                serial.writeLine(DHTstr + " native query completed in " + (endTime - startTime) + " microseconds")
+
+                if (_readSuccessful) {
+                    serial.writeLine("Checksum ok")
+                    serial.writeLine("Humidity: " + _humidity + " %")
+                    serial.writeLine("Temperature: " + _temperature + (_temptype == tempType.celsius ? " *C" : " *F"))
+                } else {
+                    serial.writeLine("Checksum error")
+                }
+                serial.writeLine("----------------------------------------")
+            }
+
+            if (wait) basic.pause(2000)
+            return
+        }
+
+        // Original TypeScript reader remains available for DHT11.
         //request data
         pins.digitalWritePin(dataPin, 0) //begin protocol, pull down pin
         basic.pause(18)
@@ -83,13 +144,12 @@ namespace dht11_dht22 {
             while (pins.digitalReadPin(dataPin) == 1); //sensor response
 
             //read data (5 bytes)
-            // Use pulseIn to measure each HIGH pulse on micro:bit V2.
-            // About 26-28 us means bit 0; about 70 us means bit 1.
             for (let index = 0; index < 40; index++) {
-                let pulseLength: number = pins.pulseIn(dataPin, PulseValue.High, 120)
-
-                // A timeout returns 0; otherwise classify the bit by pulse length.
-                if (pulseLength > 45) dataArray[index] = true
+                while (pins.digitalReadPin(dataPin) == 1);
+                while (pins.digitalReadPin(dataPin) == 0);
+                control.waitMicros(28)
+                //if sensor still pull up data pin after 28 us it means 1, otherwise 0
+                if (pins.digitalReadPin(dataPin) == 1) dataArray[index] = true
             }
 
             endTime = input.runningTimeMicros()
