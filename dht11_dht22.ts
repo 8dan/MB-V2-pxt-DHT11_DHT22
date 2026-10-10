@@ -86,9 +86,9 @@ namespace dht11_dht22 {
                 // Wait for the low part of the bit to end and the high part to begin.
                 while (pins.digitalReadPin(dataPin) == 0);
 
-                // A high pulse of about 26-28 us means 0.
-                // A high pulse of about 70 us means 1.
-                control.waitMicros(40)
+                // Sample during the high part.
+                // digitalReadPin also consumes execution time on micro:bit V2.
+                control.waitMicros(25)
 
                 if (pins.digitalReadPin(dataPin) == 1) {
                     dataArray[index] = true
