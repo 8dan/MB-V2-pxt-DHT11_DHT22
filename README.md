@@ -1,111 +1,129 @@
-# BBC micro:bit MakeCode editor extension for DHT11 and DHT22 humidity/temperature sensors
+# MB-V2-pxt-DHT11_DHT22
 
-[DHT11](https://www.mouser.com/ds/2/758/DHT11-Technical-Data-Sheet-Translated-Version-1143054.pdf) and [DHT22](https://www.sparkfun.com/datasheets/Sensors/Temperature/DHT22.pdf) are two popular sensors among microcontroller users, especially the cheap DHT11s. DHT22s cost more but have better data resolution.
+MakeCode extension for reading DHT11 and DHT22/AM2302 temperature and humidity sensors with BBC micro:bit.
 
-My codes are based on [MonadnockSystems/pxt-dht11](https://github.com/MonadnockSystems/pxt-dht11) but modified the pin pull-up time calculating method based on some Arduino examples with several additional features. The extension also support DHT22s.
+This fork adds working DHT22/AM2302 support for **BBC micro:bit V2** by using the native `dht22native` reader for timing-sensitive communication.
 
-To import this extension, go to Advanced -> +Extension and enter "DHT11" or "DHT22" in the search box, or copy/paste [https://github.com/alankrantas/pxt-DHT11_DHT22](https://github.com/alankrantas/pxt-DHT11_DHT22) into the search box. Press enter and click the extension.
+## Tested configuration
 
-![img_0001](https://user-images.githubusercontent.com/44191076/53887169-aae7d600-405c-11e9-9fd4-688eacbf0721.JPG)
+The micro:bit V2 implementation was tested with a DHT22/AM2302 sensor. During testing, the sensor returned stable readings and correctly reacted to warm, humid exhaled air.
 
-![img_0002](https://user-images.githubusercontent.com/44191076/53887223-cf43b280-405c-11e9-97a0-495904cf6cae.JPG)
+Example stable room readings:
 
-## Blocks
+```text
+Temperature: 24.3 *C
+Humidity: 54.6 %
+```
 
-The extension can be used for DHT11 or DHT22 sensors. Use the first block to select module type and read data (it is recommended to wait between queries; at least 1 second for DHT11 and 2 seconds for DHT22), then use the second one to read either humidity level (%) or temperature (celsius).
+Example response after warm, humid air reached the sensor:
 
-This extension also verifies checksum from sensors. If the checksum is wrong, you'll get -999 for both temperature and humidity readings, and "Last query successful?" block would return false.
+```text
+Temperature: 28.0 *C
+Humidity: 97.3 %
+```
 
-![1](https://user-images.githubusercontent.com/44191076/53888212-dd92ce00-405e-11e9-9947-6cbb0caf10a0.jpg)
+## Import into MakeCode
 
-![microbit-screenshot](https://user-images.githubusercontent.com/44191076/55158571-3a832f00-519a-11e9-9633-581dabd109ea.png)
+1. Open [Microsoft MakeCode for micro:bit](https://makecode.microbit.org/).
+2. Create or open a project.
+3. Select **Extensions**.
+4. Paste this repository URL into the search field:
 
-```blocks
+```text
+https://github.com/8dan/MB-V2-pxt-DHT11_DHT22
+```
+
+5. Select the extension.
+
+## Basic use
+
+Choose the correct sensor type in the query block:
+
+- `DHT11` for a DHT11 sensor
+- `DHT22` for a DHT22 or AM2302 sensor
+
+For DHT22, wait at least two seconds between queries.
+
+```typescript
 basic.forever(function () {
-    DHT11_DHT22.queryData(
-    DHTtype.DHT11,
-    DigitalPin.P0,
-    true,
-    false,
-    true
+    dht11_dht22.queryData(
+        DHTtype.DHT22,
+        DigitalPin.P0,
+        true,
+        true,
+        true
     )
-    basic.showString("T: " + DHT11_DHT22.readData(dataType.temperature) + " *C")
+
+    serial.writeLine(
+        "Temperature: "
+        + dht11_dht22.readData(dataType.temperature)
+        + " *C"
+    )
+
+    serial.writeLine(
+        "Humidity: "
+        + dht11_dht22.readData(dataType.humidity)
+        + " %"
+    )
 })
 ```
 
-You can also choose to output data via serial port:
+The arguments of `queryData` are:
 
-```
-DHT11 query completed in 25848 microseconds                   
-Checksum ok                   
-Humidity: 77 %                
-Temperature: 22.01 *C         
-----------------------------------------
-DHT11 query completed in 25849 microseconds                   
-Checksum ok                   
-Humidity: 77 %                
-Temperature: 22.01 *C         
-----------------------------------------
-DHT11 query completed in 25838 microseconds                   
-Checksum ok                   
-Humidity: 77 %                
-Temperature: 22 *C            
-----------------------------------------
-DHT11 query completed in 25861 microseconds                   
-Checksum ok                   
-Humidity: 77 %                
-Temperature: 22 *C            
-----------------------------------------
-```
+1. sensor type,
+2. data pin,
+3. internal pin pull-up,
+4. serial output,
+5. wait two seconds after the query.
 
-```
-DHT22 query completed in 26162 microseconds                   
-Checksum ok                   
-Humidity: 74.500000000000001 %
-Temperature: 21.899999999999999 *C                            
-----------------------------------------
-DHT22 query completed in 26162 microseconds                   
-Checksum ok                   
-Humidity: 74.299999999999997 %
-Temperature: 21.899999999999999 *C                            
-----------------------------------------
-DHT22 query completed in 26120 microseconds                   
-Checksum ok                   
-Humidity: 74.099999999999992 %
-Temperature: 21.899999999999999 *C                            
-----------------------------------------
-DHT22 query completed in 26048 microseconds                   
-Checksum ok                   
-Humidity: 74 %                
-Temperature: 21.899999999999999 *C                            
-----------------------------------------
+## Wiring
+
+For a three-pin DHT22/AM2302 module:
+
+- `VCC` or `+` to micro:bit `3V`
+- `GND` or `-` to micro:bit `GND`
+- `DATA` or `OUT` to the selected digital pin, for example `P0`
+
+Some modules use a different pin order. Check the labels printed on the module before connecting power.
+
+For a bare four-pin sensor, use a pull-up resistor between `VCC` and `DATA`, or enable the internal pull-up option in the query block.
+
+## Reading status
+
+The extension verifies the sensor checksum. If a query fails, temperature and humidity are set to `-999`.
+
+Use:
+
+```typescript
+dht11_dht22.readDataSuccessful()
 ```
 
-Temperature is default outputed in Celsius. You can also change it to Fahrenheit with the block "Temperature type" in the advanced panel.
+to check whether the last checksum was valid.
 
-## Sensor versions and wiring
+Use:
 
-There are two types of DHT11/DHT22s, one without PCB boards and have 4 pins; another have PCB boards, built-in pull up resistors and only 3 pins. Personally I would recommend you to use PCB versions.
+```typescript
+dht11_dht22.sensorrResponding()
+```
 
-For the PCB version it's easy: Vcc (+) to 3.3V or 5V (both works), GND (-) to GND, Data (out) to any GPIO pins you like.
+to check whether the sensor responded.
 
-![dht11-pinout-for-three-pin-and-four-pin-types-2](https://user-images.githubusercontent.com/44191076/53887826-0ebece80-405e-11e9-997b-a9f1b5e67a41.jpg)
+## micro:bit V2 implementation
 
-Be noted that some PCB version sensors may have different order of pins.
+DHT communication requires precise pulse timing. This fork uses the native `dht22native` reader for DHT22 queries on micro:bit V2. The original TypeScript reader remains available for DHT11 operation.
 
-If you are using the 4-pin version, you'll need to add a resistor (in my test 220 Ω - 10 KΩ works under 3.3V; above that the sensor won't response) between Vcc and Data to pull up the voltage of the data pin. Or you can simply use the pull up option in the query block - the micro:bit has internal resistors about 12-13 KΩ.
+## Notes
 
-The third pin on the 4-pin sensor from the left is not used.
+- Allow the sensor a short startup delay after power-on.
+- Do not query a DHT22 more frequently than once every two seconds.
+- Moist breath can temporarily raise the humidity reading close to 100%. The reading should gradually return toward room humidity afterward.
+- Enable serial output while testing so checksum and measurement results can be inspected in the MakeCode device console.
 
-![untitled sketch_bb](https://user-images.githubusercontent.com/44191076/53887940-40379a00-405e-11e9-9129-5bdb6262e8a3.png)
+## Credits
 
-If a hardware pull-up resistor already exists, use the internal pull up resistor dosen't seems to affect the results.
+Original extension by Alan Wang (`alankrantas/pxt-DHT11_DHT22`).
 
-## Powering up issue
-
-The DHT modlue might not be responsive if you query it immediatly after powering up. In this case you'll need to manually restart micro:bit while connecting to power, or add a small delay (like **basic.pause(100)**) in "on start" block.
-
-The driver also checks if the sensor respond to protocol before querying (in case the sensor somehow disconnected). This result can be read by using a block in the advanced panel called "Last query sensor responding?". (Note: the querying function may still freeze if the sensor disconnected right in the 20-30ms querying process.)
+This repository is a fork adapted and tested for BBC micro:bit V2.
 
 ## License
 
@@ -113,6 +131,5 @@ MIT
 
 ## Supported targets
 
-* for PXT/microbit
-(The metadata above is needed for package search.)
-
+- PXT/microbit
+- BBC micro:bit V2

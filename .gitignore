@@ -1,8 +1,19 @@
-built
-node_modules
-yotta_modules
-yotta_targets
-pxt_modules
-*.db
-*.tgz
-.header.json
+# MakeCode / PXT local build files
+.pxt/
+built/
+pxt_modules/
+
+# Build logs
+build.log
+build2.log
+*.log
+
+# Local npm files created during development
+node_modules/
+package-lock.json
+package.json
+
+# Editor and operating-system files
+.vscode/
+.DS_Store
+Thumbs.db
